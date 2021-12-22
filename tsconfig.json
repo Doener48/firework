@@ -3,7 +3,8 @@
     "sourceMap": true,
     "target": "es6", 
     "module": "amd", 
-    "outFile": "./dist/main.js"
+    "outFile": "./dist/main.js",
+    "moduleResolution": "Node"
   },
   "include": ["./src/**/*"]
 }

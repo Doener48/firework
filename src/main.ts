@@ -1,3 +1,9 @@
+interface Color {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
 class Vector {
   x: number;
   y: number;
@@ -17,31 +23,92 @@ class Vector {
   }
 }
 
+const gui = new dat.GUI({name: 'My GUI'});
+const rocketFolder = gui.addFolder('Rocket');
+const explosionFolder = gui.addFolder('Explosion');
+const wordFolder = gui.addFolder('Word');
+const generalFolder = gui.addFolder('General');
+
+let generalSettings = {bgAlpha: 0.2};
+generalFolder.add(generalSettings, 'bgAlpha', 0, 1);
+
+let rocketSettings = {size: 10, spawnRate: 3};
+rocketFolder.add(rocketSettings, 'size', 0, 50);
+rocketFolder.add(rocketSettings, 'spawnRate', 0, 100);
+
+let explosionSettings = {size: 3, fadeSpeed: 3};
+explosionFolder.add(explosionSettings, 'size', 1, 50);
+explosionFolder.add(explosionSettings, 'fadeSpeed', 1, 25);
+
+let wordSettings = {particleSize: 1, fadeSpeed: 1};
+wordFolder.add(wordSettings, 'particleSize', 1, 50);
+wordFolder.add(explosionSettings, 'fadeSpeed', 1, 25);
+
 const canvas: any = document.getElementById("mainCanvas");
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
-
 window.addEventListener("resize", init, false);
 
-const bgcolor = { r: 0, g: 0, b: 0, a: 0.2 };
+const textCanvas: any = document.getElementById("letterCanvas");
+const textCtx: CanvasRenderingContext2D = textCanvas.getContext("2d");
+
+const btn: any = document.getElementById("shootBtn");
+const textInput: HTMLInputElement = document.getElementById("messageInput") as HTMLInputElement;
+btn.addEventListener("click", (e:Event) => fireworks.push(new Firework(textInput.value)));
+
+const bgcolor = { r: 0, g: 0, b: 0, a: generalSettings.bgAlpha};
 const gravity = new Vector(0, 0.05);
 const fireworks: Firework[] = [];
 
-let settings;
+let letterImageData;
 
 function init() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  canvas.style.background = "black";
   ctx.fillStyle = `rgba(${bgcolor.r},${bgcolor.g},${bgcolor.b},${bgcolor.a})`;
   ctx.fill();
+
+  textCanvas.style.background = "white";
+  textCanvas.width = 150;
+  textCanvas.height = 150;
+  // fireworks.push(new Firework("hello"));
+}
+
+function generateTextParticles(text: string, offset: Vector, color: Color) {
+  textCtx.fillStyle = "black";
+  textCtx.font = "24px Verdana";
+  textCtx.clearRect(0, 0, 150, 150);
+  textCtx.fillText(text, 0, 30, text.length * 20);
+  letterImageData = textCtx.getImageData(0, 0, 100, 100);
+  const letterParticles = [];
+  for (let y = 0, y2 = letterImageData.height; y < y2; y++) {
+    for (let x = 0, x2 = letterImageData.width; x < x2; x++) {
+      if (
+        letterImageData.data[y * 4 * letterImageData.width + x * 4 + 3] > 128
+      ) {
+        const vx = (Math.random() - 0.5) * 7;
+        const vy = (Math.random() - 0.5) * 7;
+        letterParticles.push(
+          new Particle(
+            new Vector(x * 3 + offset.x, y * 3 + offset.y),
+            new Vector(vx, vy),
+            new Vector(),
+            wordSettings.particleSize,
+            color
+          )
+        );
+      }
+    }
+  }
+  return letterParticles;
 }
 
 function animate() {
   requestAnimationFrame(animate);
-  // ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   ctx.rect(0, 0, window.innerWidth, window.innerHeight);
-  ctx.fillStyle = `rgba(${bgcolor.r},${bgcolor.g},${bgcolor.b},${bgcolor.a})`;
+  ctx.fillStyle = `rgba(${bgcolor.r},${bgcolor.g},${bgcolor.b},${generalSettings.bgAlpha})`;
   ctx.fill();
-  if (Math.random() <= 0.05) {
+  if (Math.random() <= rocketSettings.spawnRate/100) {
     fireworks.push(new Firework());
   }
   for (let i = fireworks.length - 1; i >= 0; i--) {
@@ -52,22 +119,21 @@ function animate() {
     }
   }
 }
-
 class Particle {
   pos: Vector;
   vel: Vector;
   acc: Vector;
   size: number;
-  color: { r: number; g: number; b: number; a: number };
+  color: Color;
 
   constructor(
     pos: Vector = new Vector(
-      window.innerWidth / 2 + ((Math.random() - 0.5) * window.innerWidth / 6),
+      window.innerWidth / 2 + ((Math.random() - 0.5) * window.innerWidth) / 6,
       window.innerHeight
     ),
     vel: Vector = new Vector((Math.random() - 0.5) * 3, Math.random() * -2 - 7),
     acc: Vector = new Vector(),
-    size: number = 10,
+    size: number = rocketSettings.size,
     color = {
       r: Math.random() * 255,
       g: Math.random() * 255,
@@ -112,11 +178,13 @@ class Firework {
   rocket: Particle;
   particles: Particle[];
   exploded: boolean;
+  text: string;
 
-  constructor() {
+  constructor(text?: string) {
     this.particles = [];
     this.exploded = false;
     this.rocket = new Particle();
+    this.text = text;
   }
 
   update() {
@@ -128,9 +196,13 @@ class Firework {
       }
     } else {
       for (let i = this.particles.length - 1; i >= 0; i--) {
+        let fader = explosionSettings.fadeSpeed;
+        if (this.text) {
+          fader = wordSettings.fadeSpeed;
+        }
         // this.particles[i].applyForce(gravity);
         this.particles[i].update();
-        this.particles[i].fade(3);
+        this.particles[i].fade(fader);
         if (this.particles[i].color.a <= 0) {
           this.particles.splice(i, 1);
         }
@@ -150,18 +222,27 @@ class Firework {
 
   explode() {
     this.exploded = true;
-    for (let i = 0; i < 50; i++) {
-      const vx = (Math.random() - 0.5) * 7;
-      const vy = (Math.random() - 0.5) * 7;
-      this.particles.push(
-        new Particle(
-          new Vector(this.rocket.pos.x, this.rocket.pos.y),
-          new Vector(vx, vy),
-          new Vector(),
-          3,
-          this.rocket.color
-        )
+    if (this.text) {
+      const letter = generateTextParticles(
+        this.text,
+        new Vector(this.rocket.pos.x, this.rocket.pos.y),
+        this.rocket.color
       );
+      this.particles = letter;
+    } else {
+      for (let i = 0; i < 50; i++) {
+        const vx = (Math.random() - 0.5) * 7;
+        const vy = (Math.random() - 0.5) * 7;
+        this.particles.push(
+          new Particle(
+            new Vector(this.rocket.pos.x, this.rocket.pos.y),
+            new Vector(vx, vy),
+            new Vector(),
+            explosionSettings.size,
+            this.rocket.color
+          )
+        );
+      }
     }
   }
 }
