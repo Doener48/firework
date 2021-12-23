@@ -1,13 +1,11 @@
 # fireworks
 todo:
- - text particles get home position for text
- - spawn text particle in rocket center
- - steering to home position
+ - delay for explosion
+ - const for random velocity vector 
 
-
- - exposed settings with dat.gui
+ - exposed angle settings with dat.gui
+ - exposed velocity settings with dat.gui
   
-
  - auto fps
  - auto initial force depending on height
  - lobbies
