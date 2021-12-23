@@ -48,7 +48,7 @@ const generalFolder = gui.addFolder("General");
 let generalSettings = { bgAlpha: 0.2 };
 generalFolder.add(generalSettings, "bgAlpha", 0, 1);
 
-let rocketSettings = { size: 10, spawnRate: 0 };
+let rocketSettings = { size: 10, spawnRate: 3 };
 rocketFolder.add(rocketSettings, "size", 0, 50);
 rocketFolder.add(rocketSettings, "spawnRate", 0, 100);
 
