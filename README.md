@@ -1,4 +1,4 @@
-# fireworks
+# firework
 
 Web firework on the HTML Canvas based on a particle system. [View it live](https://firework.kebab-cases.com/)
 
